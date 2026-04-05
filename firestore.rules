@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: votes
+    // Document ID: {userId}_{animeId} (to ensure one vote per anime per user)
+    // Fields:
+    //   - animeId: string (required) - The ID of the anime being voted for.
+    //   - userId: string (required) - The UID of the user who voted.
+    //   - votedAt: timestamp (required) - The timestamp of the vote.
+    //
+    // Collection: quizResults
+    // Document ID: {userId}_{timestamp}
+    // Fields:
+    //   - score: number (required) - The score achieved.
+    //   - total: number (required) - Total questions.
+    //   - userId: string (required) - The UID of the user.
+    //   - completedAt: timestamp (required) - Completion timestamp.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidVote(data) {
+      return hasRequiredFields(['animeId', 'userId', 'votedAt']) &&
+             hasOnlyAllowedFields(['animeId', 'userId', 'votedAt']) &&
+             data.animeId is string && data.animeId.size() > 0 && data.animeId.size() < 50 &&
+             data.userId == request.auth.uid &&
+             data.votedAt is timestamp;
+    }
+
+    function isValidQuizResult(data) {
+      return hasRequiredFields(['score', 'total', 'userId', 'completedAt']) &&
+             hasOnlyAllowedFields(['score', 'total', 'userId', 'completedAt']) &&
+             data.score is number && data.score >= 0 &&
+             data.total is number && data.total > 0 &&
+             data.userId == request.auth.uid &&
+             data.completedAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Votes collection
+    match /votes/{voteId} {
+      // Anyone can read votes to see the poll results
+      allow read: if true;
+      
+      // Users can only create their own votes
+      allow create: if isAuthenticated() && isValidVote(request.resource.data);
+      
+      // Votes are immutable
+      allow update, delete: if false;
+    }
+
+    // Quiz results collection
+    match /quizResults/{resultId} {
+      // Users can only read their own results
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can only create their own results
+      allow create: if isAuthenticated() && isValidQuizResult(request.resource.data);
+      
+      // Results are immutable
+      allow update, delete: if false;
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "Vote": {
+      "title": "Vote",
+      "description": "Represents a user's vote for an anime to import.",
+      "type": "object",
+      "properties": {
+        "animeId": {
+          "type": "string",
+          "description": "The ID of the anime being voted for."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who voted."
+        },
+        "votedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the vote."
+        }
+      },
+      "required": ["animeId", "userId", "votedAt"]
+    },
+    "QuizResult": {
+      "title": "QuizResult",
+      "description": "Represents a user's quiz score.",
+      "type": "object",
+      "properties": {
+        "score": {
+          "type": "integer",
+          "description": "The score achieved by the user."
+        },
+        "total": {
+          "type": "integer",
+          "description": "The total number of questions in the quiz."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who took the quiz."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of completion."
+        }
+      },
+      "required": ["score", "total", "userId", "completedAt"]
+    }
+  },
+  "firestore": {
+    "/votes/{voteId}": {
+      "schema": "Vote",
+      "description": "Collection of all votes for the poll."
+    },
+    "/quizResults/{resultId}": {
+      "schema": "QuizResult",
+      "description": "Collection of all quiz results."
+    }
+  }
+}
